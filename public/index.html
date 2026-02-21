@@ -385,7 +385,7 @@
       <header class="hero">
         <p class="hero-pill">download master</p>
         <h1>Pulse Downloader</h1>
-        <p>Paste any YouTube link, analyze the available formats, and stream a merged MP4 with audio or grab the raw video only stream.</p>
+        <p>Paste any YouTube link, analyze the available formats, and open the direct yt-dlp download URLs for each stream.</p>
       </header>
 
       <section class="surface analyzer">
@@ -403,7 +403,7 @@
             <img id="thumbnail-img" src="" alt="Video thumbnail" />
             <div class="preview-actions">
               <button id="download-thumbnail" class="ghost-button" type="button">Download Thumbnail</button>
-              <button id="download-audio" class="cta" type="button">Download Audio (MP3)</button>
+              <button id="download-audio" class="cta" type="button">Download Audio</button>
             </div>
           </div>
           <div class="stats-card">
@@ -423,7 +423,7 @@
                 <span>Audio</span>
               </div>
             </div>
-            <p class="meta-helper">“Video + Audio” buttons merge the selected resolution with its best audio track via ffmpeg, while “Video only” sends the raw stream for editing or syncing later.</p>
+            <p class="meta-helper">“Video + Audio” buttons return the yt-dlp-backed download URL for the merged stream, while “Video only” returns the raw video track.</p>
           </div>
         </div>
 
