@@ -15,6 +15,43 @@ let currentUrl = '';
 let currentTitle = '';
 let currentThumbnail = '';
 
+const setStatus = (message = '', isError = false) => {
+  statusEl.textContent = message;
+  statusEl.style.color = isError ? '#ff6b6b' : 'var(--muted)';
+};
+
+const resetResult = () => {
+  formatsList.innerHTML = '';
+  resultSection.classList.remove('active');
+};
+
+const directDownload = async ({ mode, formatId }) => {
+  const query = new URLSearchParams({ url: currentUrl, mode });
+  if (formatId) {
+    query.set('formatId', formatId);
+  }
+
+  const response = await fetch(`/api/download/url?${query.toString()}`);
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}));
+    throw new Error(payload.error || 'Unable to resolve download link');
+  }
+
+  const payload = await response.json();
+  return payload.url;
+};
+
+const triggerDownload = (url, filename) => {
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.target = '_blank';
+  anchor.rel = 'noreferrer noopener';
+  if (filename) {
+    anchor.download = filename;
+  }
+  anchor.click();
+};
+
 const formatBytes = (bytes) => {
   if (!bytes || Number.isNaN(bytes)) return 'Size not available';
   const units = ['B', 'KB', 'MB', 'GB'];
@@ -27,40 +64,31 @@ const formatBytes = (bytes) => {
   return `${amount.toFixed(1)} ${units[index]}`;
 };
 
-const setStatus = (message = '', isError = false) => {
-  statusEl.textContent = message;
-  statusEl.style.color = isError ? '#ff6b6b' : 'var(--muted)';
-};
-
-const resetResult = () => {
-  formatsList.innerHTML = '';
-  resultSection.classList.remove('active');
-};
-
-const createButton = (label, mode, isPrimary = true) => {
+const createDownloadButton = (label, mode, formatId) => {
   const button = document.createElement('button');
   button.type = 'button';
+  button.className = mode === 'with-audio' ? 'primary' : 'ghost';
   button.textContent = label;
-  if (isPrimary) {
-    button.classList.add('primary');
-  } else {
-    button.classList.add('ghost');
-  }
-  button.addEventListener('click', () => {
-    if (!currentUrl) return;
-    const params = new URLSearchParams({
-      url: currentUrl,
-      formatId: button.dataset.formatId,
-      ext: button.dataset.ext || 'mp4',
-      title: currentTitle,
-      mode,
-    });
-    window.open(`/api/download/video?${params}`, '_blank');
+  button.addEventListener('click', async () => {
+    if (!currentUrl) {
+      setStatus('Analyze a video before downloading.', true);
+      return;
+    }
+    setStatus('Preparing download...');
+    try {
+      const directUrl = await directDownload({ mode, formatId });
+      triggerDownload(directUrl, `${currentTitle || 'video'}.mp4`);
+      setStatus('Download link opened in a new tab.');
+    } catch (error) {
+      console.error(error);
+      setStatus(error.message, true);
+    }
   });
   return button;
 };
 
-const buildFormats = (url, title, formats) => {
+const buildFormats = (formats) => {
+  formatsList.innerHTML = '';
   if (!Array.isArray(formats) || formats.length === 0) {
     const empty = document.createElement('p');
     empty.textContent = 'No downloadable video resolutions were discovered.';
@@ -68,7 +96,7 @@ const buildFormats = (url, title, formats) => {
     return;
   }
 
-  const highestHeight = Math.max(...formats.map((format) => format.height || 0));
+  const highestHeight = Math.max(...formats.map((f) => f.height || 0));
 
   formats.forEach((format) => {
     const card = document.createElement('article');
@@ -81,7 +109,7 @@ const buildFormats = (url, title, formats) => {
 
     const tag = document.createElement('span');
     tag.className = 'tag';
-    const fps = format.fps ? `${format.fps}fps` : 'standard';
+    const fps = format.fps ? `${format.fps}fps` : 'std';
     tag.textContent = `${format.ext?.toUpperCase() || 'VIDEO'} • ${fps}`;
     header.appendChild(tag);
     if (format.height === highestHeight) {
@@ -103,13 +131,8 @@ const buildFormats = (url, title, formats) => {
     const actions = document.createElement('div');
     actions.className = 'format-card-actions';
 
-    const videoAudioButton = createButton('Video + Audio', 'with-audio', true);
-    const videoOnlyButton = createButton('Video only', 'video-only', false);
-
-    [videoAudioButton, videoOnlyButton].forEach((btn) => {
-      btn.dataset.formatId = format.formatId;
-      btn.dataset.ext = format.ext;
-    });
+    const videoAudioButton = createDownloadButton('Video + Audio', 'with-audio', format.formatId);
+    const videoOnlyButton = createDownloadButton('Video only', 'video-only', format.formatId);
 
     actions.appendChild(videoAudioButton);
     actions.appendChild(videoOnlyButton);
@@ -152,13 +175,13 @@ const runAnalysis = async () => {
     titleEl.textContent = data.title;
     durationEl.textContent = data.formattedDuration || 'Unknown';
     uploaderEl.textContent = data.uploader || 'Unknown channel';
-    audioInfoEl.textContent = 'Audio merged via ffmpeg';
+    audioInfoEl.textContent = 'Direct download links powered by yt-dlp.';
     thumbnailImg.src = currentThumbnail;
     thumbnailImg.alt = `${data.title} thumbnail`;
 
-    buildFormats(currentUrl, currentTitle, data.videoFormats);
+    buildFormats(data.videoFormats);
     resultSection.classList.add('active');
-    setStatus('Analysis complete. Select a format to download with or without audio.');
+    setStatus('Analysis complete. Choose a format or audio track.');
   } catch (error) {
     console.error(error);
     setStatus(error.message || 'Unable to analyze the provided URL.', true);
@@ -170,13 +193,20 @@ urlInput.addEventListener('keyup', (event) => {
   if (event.key === 'Enter') runAnalysis();
 });
 
-downloadAudioBtn.addEventListener('click', () => {
+downloadAudioBtn.addEventListener('click', async () => {
   if (!currentUrl) {
-    setStatus('Analyze a video first to download audio.', true);
+    setStatus('Analyze a video first to access the audio link.', true);
     return;
   }
-  const params = new URLSearchParams({ url: currentUrl, title: currentTitle });
-  window.open(`/api/download/audio?${params}`, '_blank');
+  setStatus('Fetching audio URL...');
+  try {
+    const link = await directDownload({ mode: 'audio' });
+    triggerDownload(link, `${currentTitle || 'audio'}.webm`);
+    setStatus('Audio link opened in a new tab.');
+  } catch (error) {
+    console.error(error);
+    setStatus(error.message, true);
+  }
 });
 
 downloadThumbnailBtn.addEventListener('click', () => {
@@ -184,9 +214,5 @@ downloadThumbnailBtn.addEventListener('click', () => {
     setStatus('Analyze a video before downloading its thumbnail.', true);
     return;
   }
-  const params = new URLSearchParams({
-    thumbnailUrl: currentThumbnail,
-    title: currentTitle,
-  });
-  window.open(`/api/download/thumbnail?${params}`, '_blank');
+  triggerDownload(currentThumbnail, `${currentTitle || 'thumbnail'}.jpg`);
 });
