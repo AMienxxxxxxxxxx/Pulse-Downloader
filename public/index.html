@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Pulse Downloader</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #03030a;
+        --surface: rgba(14, 13, 26, 0.9);
+        --border: rgba(255, 255, 255, 0.08);
+        --accent: #6e5bff;
+        --accent-strong: #c76bff;
+        --text: #f4f5ff;
+        --muted: rgba(244, 245, 255, 0.65);
+        font-family: 'Space Grotesk', system-ui, sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: radial-gradient(circle at 5% 20%, rgba(110, 91, 255, 0.25), transparent 35%),
+          radial-gradient(circle at 95% 0%, rgba(199, 107, 255, 0.25), transparent 40%),
+          #01010a;
+        color: var(--text);
+      }
+
+      body::after {
+        content: '';
+        position: fixed;
+        inset: 0;
+        background: linear-gradient(180deg, rgba(3, 3, 10, 0.85), rgba(3, 3, 10, 0.95));
+        pointer-events: none;
+      }
+
+      .page {
+        position: relative;
+        z-index: 1;
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 2.5rem 1.25rem 3rem;
+      }
+
+      header.hero {
+        text-align: left;
+        margin-bottom: 2rem;
+      }
+
+      header.hero h1 {
+        margin: 0;
+        font-size: clamp(2.5rem, 5vw, 3.5rem);
+        letter-spacing: -0.03em;
+      }
+
+      header.hero p {
+        margin-top: 0.75rem;
+        color: var(--muted);
+        max-width: 640px;
+        line-height: 1.6;
+      }
+
+      .hero-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        padding: 0.35rem 0.9rem;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(255, 255, 255, 0.04);
+        font-size: 0.8rem;
+        letter-spacing: 0.4em;
+        text-transform: uppercase;
+        color: rgba(244, 245, 255, 0.7);
+      }
+
+      .surface {
+        background: var(--surface);
+        border-radius: 28px;
+        border: 1px solid var(--border);
+        padding: 1.75rem;
+        box-shadow: 0 25px 55px rgba(2, 2, 11, 0.9);
+        margin-bottom: 1.5rem;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .surface:before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        pointer-events: none;
+        background: radial-gradient(circle at 20% 20%, rgba(110, 91, 255, 0.12), transparent 35%),
+          radial-gradient(circle at 80% 0%, rgba(199, 107, 255, 0.1), transparent 30%);
+        mix-blend-mode: screen;
+      }
+
+      .analyzer {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+      }
+
+      .input-group {
+        display: flex;
+        gap: 0.8rem;
+        align-items: center;
+        width: 100%;
+      }
+
+      .input-group input {
+        flex: 1;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 14px;
+        background: rgba(0, 0, 0, 0.35);
+        color: var(--text);
+        padding: 0.9rem 1rem;
+        font-size: 1rem;
+        transition: border 0.2s ease;
+      }
+
+      .input-group input:focus {
+        border-color: var(--accent);
+        outline: none;
+      }
+
+      .input-group button {
+        flex-shrink: 0;
+        border: none;
+        padding: 0.9rem 1.6rem;
+        border-radius: 16px;
+        background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+        color: #fff;
+        font-weight: 600;
+        cursor: pointer;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+      }
+
+      .input-group button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 15px 30px rgba(110, 91, 255, 0.45);
+      }
+
+      #status {
+        margin: 0;
+        min-height: 1rem;
+        font-size: 0.95rem;
+        color: var(--muted);
+      }
+
+      #result {
+        display: none;
+      }
+
+      #result.active {
+        display: block;
+      }
+
+      .result-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 1.5rem;
+      }
+
+      .preview-card,
+      .stats-card {
+        background: rgba(10, 11, 25, 0.85);
+        border-radius: 22px;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        padding: 1.25rem;
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02);
+      }
+
+      .preview-card img {
+        width: 100%;
+        border-radius: 16px;
+        object-fit: cover;
+        aspect-ratio: 16/9;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        margin-bottom: 1rem;
+      }
+
+      .preview-card h3 {
+        margin: 0 0 0.3rem;
+        font-size: 1rem;
+        letter-spacing: 0.2em;
+        color: var(--muted);
+      }
+
+      .preview-actions {
+        display: flex;
+        gap: 0.85rem;
+        flex-wrap: wrap;
+      }
+
+      .preview-actions button {
+        flex: 1;
+        min-width: 140px;
+        border-radius: 16px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        background: rgba(255, 255, 255, 0.03);
+        padding: 0.8rem 1rem;
+        font-weight: 600;
+        color: #fff;
+        cursor: pointer;
+        transition: transform 0.2s ease, background 0.2s ease;
+      }
+
+      .preview-actions .ghost-button {
+        border-color: rgba(255, 255, 255, 0.25);
+        background: rgba(255, 255, 255, 0.05);
+      }
+
+      .preview-actions .cta {
+        background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+        border: none;
+        box-shadow: 0 10px 25px rgba(108, 99, 255, 0.4);
+      }
+
+      .preview-actions button:hover {
+        transform: translateY(-2px);
+      }
+
+      .stats-card .title {
+        font-size: 1rem;
+        margin-bottom: 0.5rem;
+        color: var(--muted);
+        letter-spacing: 0.25em;
+        text-transform: uppercase;
+      }
+
+      .stats-card h2 {
+        margin: 0;
+        font-size: 1.8rem;
+      }
+
+      .meta-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 0.85rem;
+        margin: 1rem 0;
+      }
+
+      .meta-item {
+        background: rgba(255, 255, 255, 0.02);
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.04);
+        padding: 0.65rem 0.9rem;
+      }
+
+      .meta-item strong {
+        display: block;
+        font-size: 1.05rem;
+      }
+
+      .meta-item span {
+        font-size: 0.75rem;
+        letter-spacing: 0.3em;
+        text-transform: uppercase;
+        color: rgba(244, 245, 255, 0.65);
+      }
+
+      .meta-helper {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.9rem;
+        line-height: 1.5;
+      }
+
+      .formats-panel {
+        background: rgba(10, 10, 22, 0.95);
+        border-radius: 24px;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        padding: 1.5rem;
+      }
+
+      .formats-panel h3 {
+        margin: 0 0 0.35rem;
+        font-size: 1.25rem;
+      }
+
+      .formats-panel p {
+        margin: 0 0 1rem;
+        color: var(--muted);
+      }
+
+      .formats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 1rem;
+      }
+
+      .format-card {
+        border-radius: 18px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        padding: 1rem 1.1rem;
+        background: rgba(255, 255, 255, 0.02);
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+      }
+
+      .format-card strong {
+        font-size: 1.2rem;
+      }
+
+      .format-card .format-size {
+        font-size: 0.8rem;
+        color: rgba(244, 245, 255, 0.65);
+      }
+
+      .tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.2rem 0.65rem;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        font-size: 0.7rem;
+        color: var(--muted);
+      }
+
+      .format-card-actions {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+        gap: 0.6rem;
+        margin-top: 0.5rem;
+      }
+
+      .format-card button {
+        border: none;
+        border-radius: 14px;
+        padding: 0.65rem 0.75rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        background: linear-gradient(135deg, rgba(110, 91, 255, 0.1), rgba(110, 91, 255, 0.2));
+        color: #fff;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+      }
+
+      .format-card button.primary {
+        background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+        box-shadow: 0 12px 25px rgba(108, 99, 255, 0.45);
+      }
+
+      .format-card button.ghost {
+        background: transparent;
+      }
+
+      .format-card button:hover {
+        transform: translateY(-1px);
+      }
+
+      @media (max-width: 700px) {
+        .input-group {
+          flex-direction: column;
+          align-items: stretch;
+        }
+
+        .input-group button {
+          width: 100%;
+        }
+
+        .preview-actions {
+          flex-direction: column;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <header class="hero">
+        <p class="hero-pill">download master</p>
+        <h1>Pulse Downloader</h1>
+        <p>Paste any YouTube link, analyze the available formats, and stream a merged MP4 with audio or grab the raw video only stream.</p>
+      </header>
+
+      <section class="surface analyzer">
+        <div class="input-group">
+          <input id="url-input" type="url" placeholder="https://youtube.com/watch?v=..." autocomplete="off" />
+          <button id="analyze-btn" type="button">Analyze</button>
+        </div>
+        <p id="status">Enter a URL to begin analysis.</p>
+      </section>
+
+      <section id="result" class="surface" aria-live="polite">
+        <div class="result-grid">
+          <div class="preview-card">
+            <h3>Video preview</h3>
+            <img id="thumbnail-img" src="" alt="Video thumbnail" />
+            <div class="preview-actions">
+              <button id="download-thumbnail" class="ghost-button" type="button">Download Thumbnail</button>
+              <button id="download-audio" class="cta" type="button">Download Audio (MP3)</button>
+            </div>
+          </div>
+          <div class="stats-card">
+            <p class="title">Title</p>
+            <h2 id="video-title">—</h2>
+            <div class="meta-grid">
+              <div class="meta-item">
+                <strong id="duration">—</strong>
+                <span>Length</span>
+              </div>
+              <div class="meta-item">
+                <strong id="uploader">—</strong>
+                <span>Channel</span>
+              </div>
+              <div class="meta-item">
+                <strong id="audio-info">MP3 ready</strong>
+                <span>Audio</span>
+              </div>
+            </div>
+            <p class="meta-helper">“Video + Audio” buttons merge the selected resolution with its best audio track via ffmpeg, while “Video only” sends the raw stream for editing or syncing later.</p>
+          </div>
+        </div>
+
+        <div class="formats-panel">
+          <h3>Available resolutions</h3>
+          <p>Choose the size that fits your project. Hover to see the file size and pick whether you want the merged download or a clean video-only track.</p>
+          <div id="formats-list" class="formats-grid"></div>
+        </div>
+      </section>
+    </div>
+    <script src="script.js"></script>
+  </body>
+</html>
