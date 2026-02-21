@@ -1,12 +1,12 @@
 # Pulse YouTube Downloader
 
-Full-stack YouTube downloader built with **Node.js + Express** for the backend and vanilla **HTML/CSS/JS** for the frontend. Metadata is powered by `yt-dlp-exec` while `ffmpeg-static` merges video + audio so downloads stay complete, even in the final minutes.
+Full-stack YouTube downloader built with **Node.js + Express** for the backend and vanilla **HTML/CSS/JS** for the frontend. Metadata is powered by `yt-dlp-exec`, and the API now returns direct Google Video links so Vercel can safely serve downloads.
 
 ## Repository checklist
 
 1. `server.js` exports the Express app and only calls `app.listen()` when run directly—this keeps it compatible with both local development (`npm start`) and Vercel serverless deployments.
 2. Static assets (HTML, CSS, JS) live inside `public/`, so GitHub and Vercel can serve them as part of the same repo.
-3. API endpoints are `/api/analyze`, `/api/download/video`, `/api/download/audio`, and `/api/download/thumbnail`; no additional build steps are required.
+3. API endpoints are `/api/analyze` (metadata) and `/api/download/url` (direct download), so the client can initiate downloads once Vercel returns a signed URL.
 
 ## Local development
 
@@ -31,6 +31,6 @@ Open `http://localhost:4000` in your browser to access the Pulse Downloader UI.
    - Node serverless function wired to `server.js`.
    - Static assets served from `public/`.
    - Root fallback routes rewrite to `public/index.html`.
-4. After deployment, point the UI to `{your-vercel-url}/api/...` or leave the default base path—Vercel routes pipe all `/api/*` traffic to the Express app.
+4. After deployment the UI already targets `/api/...`; Vercel routes pipe all `/api/*` traffic to the Express app and receives the direct video/audio URLs it produces.
 
 If you need custom environment variables (e.g., for logging or analytics), configure them through the Vercel dashboard under **Settings > Environment Variables**.
